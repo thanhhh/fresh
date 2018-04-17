@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/howeyc/fsnotify"
+	"github.com/fsnotify/fsnotify"
 )
 
 func watchFolder(path string) {
@@ -14,26 +14,38 @@ func watchFolder(path string) {
 		fatal(err)
 	}
 
+	// defer watcher.Close()
+
+	// done := make(chan bool)
+
 	go func() {
 		for {
 			select {
-			case ev := <-watcher.Event:
+			case ev := <-watcher.Events:
+
 				if isWatchedFile(ev.Name) {
-					watcherLog("sending event %s", ev)
-					startChannel <- ev.String()
+					watcherLog("event: %s", ev)
+
+					if ev.Op&fsnotify.Write == fsnotify.Write {
+						watcherLog("modified file: %s", ev)
+						//log.Println("modified file:", event.Name)
+						//startChannel <- ev.String()
+					}
+
 				}
-			case err := <-watcher.Error:
+			case err := <-watcher.Errors:
 				watcherLog("error: %s", err)
 			}
 		}
 	}()
 
 	watcherLog("Watching %s", path)
-	err = watcher.Watch(path)
+	err = watcher.Add(path)
 
 	if err != nil {
 		fatal(err)
 	}
+	// <-done
 }
 
 func watch() {
